@@ -1,4 +1,7 @@
+// Importação do módulo express
 const express = require("express");
+
+// Inicialização da aplicação Express
 const app = express();
 
 // Importação do arquivos de configuração de rotas
@@ -11,6 +14,7 @@ const salaRouter = require("./routes/sala");
 const sessaoRouter = require("./routes/sessao");
 const vendaRouter = require("./routes/venda");
 
+// Configuração de middleware para lidar com JSON
 app.use(express.json());
 
 //Configuração de uso das rotas
@@ -23,7 +27,7 @@ app.use(salaRouter);
 app.use(sessaoRouter);
 app.use(vendaRouter);
 
-// Iniciando a aplicação na porta 3000
+// Inicialização do servidor na porta 3000
 app.listen(3000, function () {
   console.log("API iniciada na porta: 3000");
 });

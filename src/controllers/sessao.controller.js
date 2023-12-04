@@ -3,12 +3,15 @@ const connection = require("../configs/mysql.config");
 
 // Função que deve receber um identificador (código) e retornar a sessao correspondente
 function show(req, res) {
+  // Extração do código da sessao a partir dos parâmetros da requisição
   const codigo = req.params.codigo;
 
+  // Verificação se o código foi fornecido corretamente
   if (!codigo) {
     return res.status(400).json({ erro: "Identificador não fornecido" });
   }
 
+  // Consulta SQL para obter informações da sessao
   connection.query(
     `SELECT s.id_ses, s.data, s.horario_inicio, s.horario_fim, sa.nome, f.titulo FROM sessao s
     JOIN sala sa ON sa.id_sal = s.sala_id
@@ -28,6 +31,7 @@ function show(req, res) {
           .json({ erro: `O código #${codigo} não foi encontrado!` });
       }
 
+      // Envio das informações do cliente como resposta
       return res.status(200).json(resultado[0]);
     }
   );
@@ -35,6 +39,7 @@ function show(req, res) {
 
 // Function list
 function list(request, response) {
+  // Consulta SQL para obter todas as sessoes
   connection.query(
     `SELECT s.id_ses, s.data, s.horario_inicio, s.horario_fim, sa.nome, f.titulo FROM sessao s
     JOIN sala sa ON sa.id_sal = s.sala_id
@@ -45,6 +50,8 @@ function list(request, response) {
           .status(500)
           .json({ erro: "Ocorreram erros ao buscar os dados" });
       }
+
+      // Envio dos dados das sessoes como resposta
       return response.status(200).json({ dados: resultado });
     }
   );
@@ -52,6 +59,7 @@ function list(request, response) {
 
 // Function create
 function create(request, response) {
+  // Definição das regras de validação utilizando o módulo validatorjs
   const regras = {
     data: "required|date",
     horario_inicio: "required",
@@ -60,15 +68,17 @@ function create(request, response) {
     filme_id: "required|integer",
   };
 
+  // Criação de um objeto Validator para validar os dados da requisição
   const validacao = new Validator(request.body, regras);
 
   if (validacao.fails()) {
     return response.status(400).json(validacao.errors);
   }
 
+  // Extração dos dados da requisição
   const { data, horario_inicio, horario_fim, sala_id, filme_id } = request.body;
 
-  // Verifica se a sala existe no sistema
+  // Consulta SQL para verificar se a sala existe no sistema
   connection.query(
     "SELECT * FROM sala WHERE id_sal = ?",
     [sala_id],
@@ -85,7 +95,7 @@ function create(request, response) {
         });
       }
 
-      // Verifica se o filme existe no sistema
+      // Consulta SQL para verificar se o filme existe no sistema
       connection.query(
         "SELECT * FROM filme WHERE id_fil = ?",
         [filme_id],
@@ -102,6 +112,7 @@ function create(request, response) {
             });
           }
 
+          // Consulta SQL para inserir uma nova sessao no banco de dados
           // Se a sala e o filme existirem, insira a sessão
           connection.query(
             "INSERT INTO sessao (data, horario_inicio, horario_fim, sala_id, filme_id) VALUES (?, ?, ?, ?, ?)",
@@ -113,12 +124,14 @@ function create(request, response) {
                 });
               }
 
+              // Verificação se alguma sessao foi inserida
               if (resultadoInsercao.affectedRows === 0) {
                 return response.status(500).json({
                   erro: "Ocorreram erros ao tentar salvar a informação",
                 });
               }
 
+              // Envio dos dados da sessao criada como resposta
               return response.status(201).json({
                 data,
                 horario_inicio,
@@ -137,8 +150,10 @@ function create(request, response) {
 
 // Function update
 function update(request, response) {
+  // Extração do código da sessao a ser atualizada a partir dos parâmetros da requisição
   const codigo = request.params.codigo;
 
+  // Definição das regras de validação
   const regras = {
     data: "required|date",
     horario_inicio: "required",
@@ -147,13 +162,14 @@ function update(request, response) {
     filme_id: "required|integer",
   };
 
+  // Criação de um objeto Validator para validar os dados da requisição
   const validacao = new Validator(request.body, regras);
 
   if (validacao.fails()) {
     return response.status(400).json(validacao.errors);
   }
 
-  // Buscar a sessão no BD
+  // Consulta SQL para buscar os dados da sessao no banco de dados
   connection.query(
     "SELECT * FROM sessao WHERE id_ses = ?",
     [codigo],
@@ -164,13 +180,17 @@ function update(request, response) {
           .json({ erro: "Ocorreram erros ao buscar os dados da sessão" });
       }
 
+      // Verificação se a sessao a ser atualizada foi encontrado no banco de dados
       if (resultadoSessao.length === 0) {
         return response.status(404).json({
           erro: `Não foi possível encontrar a sessão`,
         });
       }
 
+      // Armazenamento dos dados da sessão existente
       const sessaoExistente = resultadoSessao[0];
+
+      // Extração dos dados atualizados da requisição
       const { data, horario_inicio, horario_fim, sala_id, filme_id } =
         request.body;
 
@@ -208,6 +228,7 @@ function update(request, response) {
                 });
               }
 
+              // Consulta SQL para atualizar os dados da sessao no banco de dados
               // Se a sala e o filme existirem, atualiza a sessão
               connection.query(
                 "UPDATE sessao SET data = ?, horario_inicio = ?, horario_fim = ?, sala_id = ?, filme_id = ? WHERE id_ses = ?",
@@ -219,12 +240,14 @@ function update(request, response) {
                     });
                   }
 
+                  // Verificação se alguma sessao foi atualizada
                   if (resultadoAtualizacao.affectedRows === 0) {
                     return response.status(500).json({
                       erro: "Nenhuma sessão foi atualizada",
                     });
                   }
 
+                  // Envio dos dados da sessao atualizada como resposta
                   return response.status(200).json({
                     data,
                     horario_inicio,
@@ -245,8 +268,10 @@ function update(request, response) {
 
 //function destroy
 function destroy(request, response) {
+  // Obtenção do código da sessao a ser excluída
   const codigo = request.params.codigo;
 
+  // Consulta SQL para excluir a sessao do banco de dados
   connection.query(
     "DELETE FROM sessao WHERE id_ses = ?",
     [codigo],
@@ -257,12 +282,14 @@ function destroy(request, response) {
         });
       }
 
+      // Verificação se a sessao foi encontrada e excluída com sucesso
       if (resultado.affectedRows === 0) {
         return response.json({
           erro: `Sessão #${codigo} não foi encontrada`,
         });
       }
 
+      // Resposta de sucesso após a exclusão bem-sucedida
       return response.json({
         mensagem: `Sessão ${codigo} foi deletada com sucesso`,
       });
@@ -270,5 +297,5 @@ function destroy(request, response) {
   );
 }
 
-// Module exports sempre no final do arquivo
+// Module exports: exportar as funções definidas
 module.exports = { show, list, create, update, destroy };

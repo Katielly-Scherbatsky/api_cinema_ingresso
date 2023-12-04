@@ -1,7 +1,8 @@
+// Importação do módulo express e criação do objeto router
 const express = require("express");
 const router = express.Router();
 
-// Configuração de rotas
+// Definição de rotas
 // Rota principal
 router.get("/", function (request, response) {
   return response.send("API de Gestão Cinematográfica");
@@ -17,5 +18,5 @@ router.get("/sobre", function (repost, response) {
   );
 });
 
-// Exportação da constante router código padrão
+// Exportação do objeto router
 module.exports = router;

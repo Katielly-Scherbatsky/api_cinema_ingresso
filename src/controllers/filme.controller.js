@@ -3,12 +3,15 @@ const connection = require("../configs/mysql.config");
 
 // Função que deve receber um identificador (código) e retornar o filme correspondente
 function show(req, res) {
+  // Extração do código do filme a partir dos parâmetros da requisição
   const codigo = req.params.codigo;
 
+  // Verificação se o código foi fornecido corretamente
   if (!codigo) {
     return res.status(400).json({ erro: "Identificador não fornecido" });
   }
 
+  // Consulta SQL para obter informações do filme
   connection.query(
     "SELECT * FROM filme WHERE id_fil = ?",
     [codigo],
@@ -25,6 +28,7 @@ function show(req, res) {
           .json({ erro: `O código #${codigo} não foi encontrado!` });
       }
 
+      // Envio das informações do cliente como resposta
       return res.status(200).json(resultado[0]);
     }
   );
@@ -32,18 +36,22 @@ function show(req, res) {
 
 // Function list
 function list(request, response) {
+  // Consulta SQL para obter todos os filmes
   connection.query("SELECT * FROM filme", function (err, resultado) {
     if (err) {
       return response
         .status(500)
         .json({ erro: "Ocorreram erros ao buscar os dados" });
     }
+
+    // Envio dos dados dos filmes como resposta
     return response.status(200).json({ dados: resultado });
   });
 }
 
 // Function create
 function create(request, response) {
+  // Definição das regras de validação utilizando o módulo validatorjs
   const regras = {
     titulo: "required|string|max:300",
     sinopse: "required|string|max:500",
@@ -54,12 +62,14 @@ function create(request, response) {
     duracao: "required",
   };
 
+  // Criação de um objeto Validator para validar os dados da requisição
   const validacao = new Validator(request.body, regras);
 
   if (validacao.fails()) {
     return response.status(400).json(validacao.errors);
   }
 
+  // Extração dos dados da requisição
   const {
     titulo,
     sinopse,
@@ -70,7 +80,7 @@ function create(request, response) {
     duracao,
   } = request.body;
 
-  // Verifica se o filme já existe no sistema pelo título
+  // Consulta SQL para verificar a existência do filme pelo título
   connection.query(
     "SELECT COUNT(*) as total FROM filme WHERE titulo = ?",
     [titulo],
@@ -81,6 +91,7 @@ function create(request, response) {
         });
       }
 
+      // Verificação se o filme já existe no sistema
       const totalFilmes = resultadoConsulta[0].total;
 
       if (totalFilmes > 0) {
@@ -89,6 +100,7 @@ function create(request, response) {
         });
       }
 
+      // Consulta SQL para inserir um novo filme no banco de dados
       // Se o filme não existir, realiza a inserção
       connection.query(
         "INSERT INTO filme (titulo, sinopse, atores, diretor, genero, classificacao_indicativa, duracao) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -108,12 +120,14 @@ function create(request, response) {
             });
           }
 
+          // Verificação se algum filme foi inserido
           if (resultadoInsercao.affectedRows === 0) {
             return response.status(500).json({
               erro: "Ocorreram erros ao tentar salvar a informação",
             });
           }
 
+          // Envio dos dados do filme criado como resposta
           return response.status(201).json({
             titulo,
             sinopse,
@@ -132,8 +146,10 @@ function create(request, response) {
 
 // Function update
 function update(request, response) {
+  // Extração do código do filme a ser atualizado a partir dos parâmetros da requisição
   const codigo = request.params.codigo;
 
+  // Definição das regras de validação
   const regras = {
     titulo: "required|string|max:300",
     sinopse: "required|string|max:500",
@@ -144,13 +160,14 @@ function update(request, response) {
     duracao: "required",
   };
 
+  // Criação de um objeto Validator para validar os dados da requisição
   const validacao = new Validator(request.body, regras);
 
   if (validacao.fails()) {
     return response.status(400).json(validacao.errors);
   }
 
-  // Buscar o dado no BD
+  // Consulta SQL para buscar os dados do filme no banco de dados
   connection.query(
     "SELECT * FROM filme WHERE id_fil = ?",
     [codigo],
@@ -161,12 +178,14 @@ function update(request, response) {
           .json({ erro: "Ocorreram erros ao buscar os dados" });
       }
 
+      // Verificação se o filme a ser atualizado foi encontrado no banco de dados
       if (resultado.length === 0) {
         return response.status(404).json({
           erro: `Não foi possível encontrar o filme`,
         });
       }
 
+      // Extração dos dados atualizados da requisição
       const {
         titulo,
         sinopse,
@@ -177,7 +196,7 @@ function update(request, response) {
         duracao,
       } = request.body;
 
-      // Atualizar a filme no BD
+      // Consulta SQL para atualizar os dados do filme no banco de dados
       connection.query(
         "UPDATE filme SET titulo = ?, sinopse = ?, atores = ?,  diretor = ?,  genero = ?,  classificacao_indicativa = ?,  duracao = ? WHERE id_fil = ?",
         [
@@ -197,13 +216,14 @@ function update(request, response) {
             });
           }
 
+          // Verificação se algum filme foi atualizado
           if (resultadoUpdate.affectedRows === 0) {
             return response.status(500).json({
               erro: "Nenhum filme foi atualizado",
             });
           }
 
-          // Retorna a resposta JSON aqui
+          // Envio dos dados do filme atualizado como resposta
           return response.status(200).json({
             titulo,
             sinopse,
@@ -222,8 +242,10 @@ function update(request, response) {
 
 //function destroy
 function destroy(request, response) {
+  // // Obtenção do código do filme a ser excluído
   const codigo = request.params.codigo;
 
+  // Consulta SQL para excluir o filme do banco de dados
   connection.query(
     "DELETE FROM filme WHERE id_fil = ?",
     [codigo],
@@ -234,12 +256,14 @@ function destroy(request, response) {
         });
       }
 
+      // Verificação se o filme foi encontrado e excluído com sucesso
       if (resultado.affectedRows === 0) {
         return response.json({
           erro: `Filme #${codigo} não foi encontrado`,
         });
       }
 
+      // Resposta de sucesso após a exclusão bem-sucedida
       return response.json({
         mensagem: `Filme ${codigo} foi deletado com sucesso`,
       });
@@ -247,5 +271,5 @@ function destroy(request, response) {
   );
 }
 
-// Module exports sempre no final do arquivo
+// Module exports: exportar as funções definidas
 module.exports = { show, list, create, update, destroy };
