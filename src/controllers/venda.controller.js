@@ -53,7 +53,7 @@ function list(request, response) {
 // Function create
 function create(request, response) {
   const regras = {
-    valor: "required|numeric|min:0.01", // valor seja um número maior que zero
+    valor: "required|numeric|min:0.01",
     data_hora: "required|date",
     forma_pagamento: "required|string|max:200",
     situacao: "required|string|max:20",
@@ -76,31 +76,96 @@ function create(request, response) {
     cliente_id,
   } = request.body;
 
+  // Verifica se o cliente_id existe
   connection.query(
-    "INSERT INTO venda (valor, data_hora, forma_pagamento, situacao, ingresso_id, cliente_id) VALUES (?, ?, ?, ?, ?, ?)",
-    [valor, data_hora, forma_pagamento, situacao, ingresso_id, cliente_id],
-    function (err, resultado) {
-      if (err) {
+    "SELECT * FROM cliente WHERE id_cli = ?",
+    [cliente_id],
+    function (errCliente, resultadoCliente) {
+      if (errCliente) {
         return response.status(500).json({
-          erro: "Ocorreram erros ao tentar salvar a informação",
+          erro: "Ocorreram erros ao tentar verificar o cliente",
         });
       }
 
-      if (resultado.affectedRows === 0) {
-        return response.status(500).json({
-          erro: "Ocorreram erros ao tentar salvar a informação",
+      if (resultadoCliente.length === 0) {
+        return response.status(400).json({
+          erro: "O cliente_id informado não existe",
         });
       }
 
-      return response.status(201).json({
-        valor,
-        data_hora,
-        forma_pagamento,
-        situacao,
-        ingresso_id,
-        cliente_id,
-        id: resultado.insertId,
-      });
+      // Verifica se o ingresso_id existe
+      connection.query(
+        "SELECT * FROM ingresso WHERE id_ing = ?",
+        [ingresso_id],
+        function (errIngresso, resultadoIngresso) {
+          if (errIngresso) {
+            return response.status(500).json({
+              erro: "Ocorreram erros ao tentar verificar o ingresso",
+            });
+          }
+
+          if (resultadoIngresso.length === 0) {
+            return response.status(400).json({
+              erro: "O ingresso_id informado não existe",
+            });
+          }
+
+          // Verifica se já existe uma venda com o ingresso_id
+          connection.query(
+            "SELECT * FROM venda WHERE ingresso_id = ?",
+            [ingresso_id],
+            function (errVenda, resultadoVenda) {
+              if (errVenda) {
+                return response.status(500).json({
+                  erro: "Ocorreram erros ao tentar verificar a venda",
+                });
+              }
+
+              if (resultadoVenda.length > 0) {
+                return response.status(400).json({
+                  erro: "Já existe uma venda com o ingresso_id informado",
+                });
+              }
+
+              // Se todos os IDs existirem e não houver venda, realiza a inserção
+              connection.query(
+                "INSERT INTO venda (valor, data_hora, forma_pagamento, situacao, ingresso_id, cliente_id) VALUES (?, ?, ?, ?, ?, ?)",
+                [
+                  valor,
+                  data_hora,
+                  forma_pagamento,
+                  situacao,
+                  ingresso_id,
+                  cliente_id,
+                ],
+                function (err, resultado) {
+                  if (err) {
+                    return response.status(500).json({
+                      erro: "Ocorreram erros ao tentar salvar a informação",
+                    });
+                  }
+
+                  if (resultado.affectedRows === 0) {
+                    return response.status(500).json({
+                      erro: "Ocorreram erros ao tentar salvar a informação",
+                    });
+                  }
+
+                  return response.status(201).json({
+                    valor,
+                    data_hora,
+                    forma_pagamento,
+                    situacao,
+                    ingresso_id,
+                    cliente_id,
+                    id: resultado.insertId,
+                  });
+                }
+              );
+            }
+          );
+        }
+      );
     }
   );
 }
@@ -110,7 +175,7 @@ function update(request, response) {
   const codigo = request.params.codigo;
 
   const regras = {
-    valor: "required|numeric|min:0.01", // valor seja um número maior que zero
+    valor: "required|numeric|min:0.01",
     data_hora: "required|date",
     forma_pagamento: "required|string|max:200",
     situacao: "required|string|max:20",
@@ -150,38 +215,96 @@ function update(request, response) {
         cliente_id,
       } = request.body;
 
+      // Verifica se o cliente_id existe
       connection.query(
-        "UPDATE venda SET valor = ?, data_hora = ?, forma_pagamento = ?, situacao = ?, ingresso_id = ?, cliente_id = ? WHERE id_ven = ?",
-        [
-          valor,
-          data_hora,
-          forma_pagamento,
-          situacao,
-          ingresso_id,
-          cliente_id,
-          codigo,
-        ],
-        function (err, resultado) {
-          if (err) {
+        "SELECT * FROM cliente WHERE id_cli = ?",
+        [cliente_id],
+        function (errCliente, resultadoCliente) {
+          if (errCliente) {
             return response.status(500).json({
-              erro: "Ocorreu um erro ao tentar atualizar a venda",
+              erro: "Ocorreram erros ao tentar verificar o cliente",
             });
           }
 
-          if (resultado.affectedRows === 0) {
-            return response.status(500).json({
-              erro: "Nenhuma venda foi atualizad",
+          if (resultadoCliente.length === 0) {
+            return response.status(400).json({
+              erro: "O cliente_id informado não existe",
             });
           }
-          return response.status(200).json({
-            valor,
-            data_hora,
-            forma_pagamento,
-            situacao,
-            ingresso_id,
-            cliente_id,
-            id: codigo,
-          });
+
+          // Verifica se o ingresso_id existe
+          connection.query(
+            "SELECT * FROM ingresso WHERE id_ing = ?",
+            [ingresso_id],
+            function (errIngresso, resultadoIngresso) {
+              if (errIngresso) {
+                return response.status(500).json({
+                  erro: "Ocorreram erros ao tentar verificar o ingresso",
+                });
+              }
+
+              if (resultadoIngresso.length === 0) {
+                return response.status(400).json({
+                  erro: "O ingresso_id informado não existe",
+                });
+              }
+
+              // Verifica se já existe uma venda com o ingresso_id
+              connection.query(
+                "SELECT * FROM venda WHERE ingresso_id = ? AND id_ven != ?",
+                [ingresso_id, codigo],
+                function (errVenda, resultadoVenda) {
+                  if (errVenda) {
+                    return response.status(500).json({
+                      erro: "Ocorreram erros ao tentar verificar a venda",
+                    });
+                  }
+
+                  if (resultadoVenda.length > 0) {
+                    return response.status(400).json({
+                      erro: "Já existe uma venda com o ingresso_id informado",
+                    });
+                  }
+
+                  // Se todos os IDs existirem e não houver venda, realiza a atualização
+                  connection.query(
+                    "UPDATE venda SET valor = ?, data_hora = ?, forma_pagamento = ?, situacao = ?, ingresso_id = ?, cliente_id = ? WHERE id_ven = ?",
+                    [
+                      valor,
+                      data_hora,
+                      forma_pagamento,
+                      situacao,
+                      ingresso_id,
+                      cliente_id,
+                      codigo,
+                    ],
+                    function (err, resultado) {
+                      if (err) {
+                        return response.status(500).json({
+                          erro: "Ocorreu um erro ao tentar atualizar a venda",
+                        });
+                      }
+
+                      if (resultado.affectedRows === 0) {
+                        return response.status(500).json({
+                          erro: "Nenhuma venda foi atualizada",
+                        });
+                      }
+                      return response.status(200).json({
+                        valor,
+                        data_hora,
+                        forma_pagamento,
+                        situacao,
+                        ingresso_id,
+                        cliente_id,
+                        id: codigo,
+                      });
+                    }
+                  );
+                }
+              );
+            }
+          );
         }
       );
     }

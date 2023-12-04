@@ -54,7 +54,7 @@ function list(request, response) {
 function create(request, response) {
   const regras = {
     codigo: "required|string|max:20",
-    valor: "required|numeric|min:0.01", // valor seja um número maior que zero
+    valor: "required|numeric|min:0.01",
     data_hora: "required|date",
     sessao_id: "required|integer",
     poltrona_id: "required|integer",
@@ -85,48 +85,86 @@ function create(request, response) {
         });
       }
 
-      // Verificar se a poltrona já está associada à sessão
+      // Verificar se a sessão existe
       connection.query(
-        "SELECT * FROM ingresso WHERE poltrona_id = ? AND sessao_id = ?",
-        [poltrona_id, sessao_id],
-        function (errPoltrona, resultadoPoltrona) {
-          if (errPoltrona) {
+        "SELECT * FROM sessao WHERE id_ses = ?",
+        [sessao_id],
+        function (errSessao, resultadoSessao) {
+          if (errSessao) {
             return response.status(500).json({
-              erro: "Ocorreram erros ao verificar a poltrona",
+              erro: "Ocorreram erros ao verificar a sessão",
             });
           }
 
-          if (resultadoPoltrona.length > 0) {
+          if (resultadoSessao.length === 0) {
             return response.status(400).json({
-              erro: "A poltrona já está associada à sessão. Escolha outra poltrona.",
+              erro: "O sessao_id informado não existe",
             });
           }
 
-          // Se o código for único e a poltrona não estiver associada à sessão, inserir o ingresso
+          // Verificar se a poltrona existe
           connection.query(
-            "INSERT INTO ingresso (codigo, valor, data_hora, sessao_id, poltrona_id) VALUES (?, ?, ?, ?, ?)",
-            [codigo, valor, data_hora, sessao_id, poltrona_id],
-            function (err, resultado) {
-              if (err) {
+            "SELECT * FROM poltrona WHERE id_pol = ?",
+            [poltrona_id],
+            function (errPoltrona, resultadoPoltrona) {
+              if (errPoltrona) {
                 return response.status(500).json({
-                  erro: "Ocorreram erros ao tentar salvar a informação",
+                  erro: "Ocorreram erros ao verificar a poltrona",
                 });
               }
 
-              if (resultado.affectedRows === 0) {
-                return response.status(500).json({
-                  erro: "Ocorreram erros ao tentar salvar a informação",
+              if (resultadoPoltrona.length === 0) {
+                return response.status(400).json({
+                  erro: "O poltrona_id informado não existe",
                 });
               }
 
-              return response.status(201).json({
-                codigo,
-                valor,
-                data_hora,
-                sessao_id,
-                poltrona_id,
-                id: resultado.insertId,
-              });
+              // Verificar se a poltrona já está associada à sessão
+              connection.query(
+                "SELECT * FROM ingresso WHERE poltrona_id = ? AND sessao_id = ?",
+                [poltrona_id, sessao_id],
+                function (errPoltronaSessao, resultadoPoltronaSessao) {
+                  if (errPoltronaSessao) {
+                    return response.status(500).json({
+                      erro: "Ocorreram erros ao verificar a poltrona na sessão",
+                    });
+                  }
+
+                  if (resultadoPoltronaSessao.length > 0) {
+                    return response.status(400).json({
+                      erro: "A poltrona já está associada à sessão. Escolha outra poltrona.",
+                    });
+                  }
+
+                  // Se o código for único, a sessão existir, a poltrona existir e não estiver associada à sessão, inserir o ingresso
+                  connection.query(
+                    "INSERT INTO ingresso (codigo, valor, data_hora, sessao_id, poltrona_id) VALUES (?, ?, ?, ?, ?)",
+                    [codigo, valor, data_hora, sessao_id, poltrona_id],
+                    function (err, resultado) {
+                      if (err) {
+                        return response.status(500).json({
+                          erro: "Ocorreram erros ao tentar salvar a informação",
+                        });
+                      }
+
+                      if (resultado.affectedRows === 0) {
+                        return response.status(500).json({
+                          erro: "Ocorreram erros ao tentar salvar a informação",
+                        });
+                      }
+
+                      return response.status(201).json({
+                        codigo,
+                        valor,
+                        data_hora,
+                        sessao_id,
+                        poltrona_id,
+                        id: resultado.insertId,
+                      });
+                    }
+                  );
+                }
+              );
             }
           );
         }
@@ -141,7 +179,7 @@ function update(request, response) {
 
   const regras = {
     codigo: "required|string|max:20",
-    valor: "required|numeric|min:0.01", // valor seja um número maior que zero
+    valor: "required|numeric|min:0.01",
     data_hora: "required|date",
     sessao_id: "required|integer",
     poltrona_id: "required|integer",
@@ -173,48 +211,86 @@ function update(request, response) {
       const ingressoExistente = resultado[0];
       const { valor, data_hora, sessao_id, poltrona_id } = request.body;
 
-      // Verificar se a poltrona já está associada à sessão
+      // Verificar se a sessão existe
       connection.query(
-        "SELECT * FROM ingresso WHERE poltrona_id = ? AND sessao_id = ?",
-        [poltrona_id, sessao_id],
-        function (errPoltrona, resultadoPoltrona) {
-          if (errPoltrona) {
+        "SELECT * FROM sessao WHERE id_ses = ?",
+        [sessao_id],
+        function (errSessao, resultadoSessao) {
+          if (errSessao) {
             return response.status(500).json({
-              erro: "Ocorreram erros ao verificar a poltrona",
+              erro: "Ocorreram erros ao verificar a sessão",
             });
           }
 
-          if (resultadoPoltrona.length > 0) {
+          if (resultadoSessao.length === 0) {
             return response.status(400).json({
-              erro: "A poltrona já está associada à sessão informada. Não é possível atualizar o ingresso.",
+              erro: "O sessao_id informado não existe",
             });
           }
 
-          // Se a poltrona não estiver associada à sessão, atualiza o ingresso
+          // Verificar se a poltrona existe
           connection.query(
-            "UPDATE ingresso SET valor = ?, data_hora = ?, sessao_id = ?, poltrona_id = ? WHERE id_ing = ?",
-            [valor, data_hora, sessao_id, poltrona_id, codigo],
-            function (errAtualizacao, resultadoAtualizacao) {
-              if (errAtualizacao) {
+            "SELECT * FROM poltrona WHERE id_pol = ?",
+            [poltrona_id],
+            function (errPoltrona, resultadoPoltrona) {
+              if (errPoltrona) {
                 return response.status(500).json({
-                  erro: "Ocorreu um erro ao tentar atualizar o ingresso",
+                  erro: "Ocorreram erros ao verificar a poltrona",
                 });
               }
 
-              if (resultadoAtualizacao.affectedRows === 0) {
-                return response.status(500).json({
-                  erro: "Nenhum ingresso foi atualizado",
+              if (resultadoPoltrona.length === 0) {
+                return response.status(400).json({
+                  erro: "O poltrona_id informado não existe",
                 });
               }
 
-              return response.status(200).json({
-                codigo,
-                valor,
-                data_hora,
-                sessao_id,
-                poltrona_id,
-                id: codigo,
-              });
+              // Verificar se a poltrona já está associada à sessão
+              connection.query(
+                "SELECT * FROM ingresso WHERE poltrona_id = ? AND sessao_id = ? AND id_ing <> ?",
+                [poltrona_id, sessao_id, codigo],
+                function (errPoltronaSessao, resultadoPoltronaSessao) {
+                  if (errPoltronaSessao) {
+                    return response.status(500).json({
+                      erro: "Ocorreram erros ao verificar a poltrona na sessão",
+                    });
+                  }
+
+                  if (resultadoPoltronaSessao.length > 0) {
+                    return response.status(400).json({
+                      erro: "A poltrona já está associada à sessão informada. Não é possível atualizar o ingresso.",
+                    });
+                  }
+
+                  // Se a poltrona não estiver associada à sessão, atualiza o ingresso
+                  connection.query(
+                    "UPDATE ingresso SET valor = ?, data_hora = ?, sessao_id = ?, poltrona_id = ? WHERE id_ing = ?",
+                    [valor, data_hora, sessao_id, poltrona_id, codigo],
+                    function (errAtualizacao, resultadoAtualizacao) {
+                      if (errAtualizacao) {
+                        return response.status(500).json({
+                          erro: "Ocorreu um erro ao tentar atualizar o ingresso",
+                        });
+                      }
+
+                      if (resultadoAtualizacao.affectedRows === 0) {
+                        return response.status(500).json({
+                          erro: "Nenhum ingresso foi atualizado",
+                        });
+                      }
+
+                      return response.status(200).json({
+                        codigo,
+                        valor,
+                        data_hora,
+                        sessao_id,
+                        poltrona_id,
+                        id: codigo,
+                      });
+                    }
+                  );
+                }
+              );
             }
           );
         }
