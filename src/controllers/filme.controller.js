@@ -167,73 +167,97 @@ function update(request, response) {
     return response.status(400).json(validacao.errors);
   }
 
-  // Consulta SQL para buscar os dados do filme no banco de dados
-  connection.query(
-    "SELECT * FROM filme WHERE id_fil = ?",
-    [codigo],
-    function (err, resultado) {
-      if (err) {
-        return response
-          .status(500)
-          .json({ erro: "Ocorreram erros ao buscar os dados" });
-      }
+  // Extração do título da requisição
+  const { titulo } = request.body;
 
-      // Verificação se o filme a ser atualizado foi encontrado no banco de dados
-      if (resultado.length === 0) {
-        return response.status(404).json({
-          erro: `Não foi possível encontrar o filme`,
+  // Consulta SQL para verificar a existência do filme pelo título, excluindo o filme a ser atualizado pelo seu código
+  connection.query(
+    "SELECT COUNT(*) as total FROM filme WHERE titulo = ? AND id_fil <> ?",
+    [titulo, codigo],
+    function (err, resultadoConsulta) {
+      if (err) {
+        return response.status(500).json({
+          erro: "Ocorreram erros ao verificar a existência do filme",
         });
       }
 
-      // Extração dos dados atualizados da requisição
-      const {
-        titulo,
-        sinopse,
-        atores,
-        diretor,
-        genero,
-        classificacao_indicativa,
-        duracao,
-      } = request.body;
+      // Verificação se o filme já existe no sistema
+      const totalFilmes = resultadoConsulta[0].total;
 
-      // Consulta SQL para atualizar os dados do filme no banco de dados
+      if (totalFilmes > 0) {
+        return response.status(400).json({
+          erro: "Já existe um filme com este título. Escolha um título único.",
+        });
+      }
+
+      // Consulta SQL para buscar os dados do filme no banco de dados
       connection.query(
-        "UPDATE filme SET titulo = ?, sinopse = ?, atores = ?,  diretor = ?,  genero = ?,  classificacao_indicativa = ?,  duracao = ? WHERE id_fil = ?",
-        [
-          titulo,
-          sinopse,
-          atores,
-          diretor,
-          genero,
-          classificacao_indicativa,
-          duracao,
-          codigo,
-        ],
-        function (err, resultadoUpdate) {
+        "SELECT * FROM filme WHERE id_fil = ?",
+        [codigo],
+        function (err, resultado) {
           if (err) {
-            return response.status(500).json({
-              erro: "Ocorreu um erro ao tentar atualizar o filme",
+            return response
+              .status(500)
+              .json({ erro: "Ocorreram erros ao buscar os dados" });
+          }
+
+          // Verificação se o filme a ser atualizado foi encontrado no banco de dados
+          if (resultado.length === 0) {
+            return response.status(404).json({
+              erro: `Não foi possível encontrar o filme`,
             });
           }
 
-          // Verificação se algum filme foi atualizado
-          if (resultadoUpdate.affectedRows === 0) {
-            return response.status(500).json({
-              erro: "Nenhum filme foi atualizado",
-            });
-          }
-
-          // Envio dos dados do filme atualizado como resposta
-          return response.status(200).json({
-            titulo,
+          // Extração dos dados atualizados da requisição
+          const {
             sinopse,
             atores,
             diretor,
             genero,
             classificacao_indicativa,
             duracao,
-            id: codigo,
-          });
+          } = request.body;
+
+          // Consulta SQL para atualizar os dados do filme no banco de dados
+          connection.query(
+            "UPDATE filme SET titulo = ?, sinopse = ?, atores = ?,  diretor = ?,  genero = ?,  classificacao_indicativa = ?,  duracao = ? WHERE id_fil = ?",
+            [
+              titulo,
+              sinopse,
+              atores,
+              diretor,
+              genero,
+              classificacao_indicativa,
+              duracao,
+              codigo,
+            ],
+            function (err, resultadoUpdate) {
+              if (err) {
+                return response.status(500).json({
+                  erro: "Ocorreu um erro ao tentar atualizar o filme",
+                });
+              }
+
+              // Verificação se algum filme foi atualizado
+              if (resultadoUpdate.affectedRows === 0) {
+                return response.status(500).json({
+                  erro: "Nenhum filme foi atualizado",
+                });
+              }
+
+              // Envio dos dados do filme atualizado como resposta
+              return response.status(200).json({
+                titulo,
+                sinopse,
+                atores,
+                diretor,
+                genero,
+                classificacao_indicativa,
+                duracao,
+                id: codigo,
+              });
+            }
+          );
         }
       );
     }
@@ -271,5 +295,5 @@ function destroy(request, response) {
   );
 }
 
-// Module exports: exportar as funções definidas
+// Module exports sempre no final do arquivo
 module.exports = { show, list, create, update, destroy };
