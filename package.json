@@ -23,7 +23,9 @@
   },
   "homepage": "https://github.com/Katielly-Scherbatsky/api_cinema_ingresso#readme",
   "dependencies": {
+    "axios": "^1.6.7",
     "express": "^4.18.2",
+    "fs": "^0.0.1-security",
     "mysql": "^2.18.1",
     "mysql2": "^3.6.5",
     "validatorjs": "^3.22.1"
